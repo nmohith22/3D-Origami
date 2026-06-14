@@ -1,4 +1,4 @@
-# 3D Origami Simulator
+# [3D Origami Simulator](https://nmohith22.github.io/3D-Origami/)
 
 A browser-based 3D origami folding simulator built with React and Three.js. It allows users to interact with a physical 3D paper model, make mathematically precise folds, and manipulate the result in a 3D environment.
 
