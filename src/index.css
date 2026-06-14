@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Cozy Color Palette */
+  --color-bg: #f9f6f0; /* Soft warm white/cream */
+  --color-desk: #d9c5b2; /* Light warm wood */
+  --color-paper-front: #ff8fa3; /* Soft pastel pink */
+  --color-paper-back: #ffffff; /* Stark white */
+  --color-text-main: #4a4036; /* Warm dark brown */
+  --color-text-muted: #8c7c6d;
+  
+  /* UI Elements */
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.4);
+  --glass-shadow: 0 8px 32px 0 rgba(140, 124, 109, 0.15);
+  
+  /* Typography */
+  --font-main: 'Outfit', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
+  overflow: hidden; /* Hide scrollbars for 3D canvas */
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Glassmorphism Panel Utility */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: var(--glass-shadow);
+}
+
+/* Button Utility */
+.cozy-btn {
+  font-family: var(--font-main);
+  background: var(--color-text-main);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(74, 64, 54, 0.2);
+}
+
+.cozy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(74, 64, 54, 0.3);
+  background: #362e26;
+}
+
+.cozy-btn:active {
+  transform: translateY(0);
+}
