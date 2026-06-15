@@ -15,8 +15,8 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
     ctx.fillStyle = '#3a5a40' // Craft mat green
     ctx.fillRect(0, 0, 1024, 1024)
     
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-    ctx.lineWidth = 2
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+    ctx.lineWidth = 4
     const GRID_SIZE = 32
     const step = 1024 / GRID_SIZE
     for (let i = 0; i <= GRID_SIZE; i++) {
@@ -35,8 +35,8 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
     tex.colorSpace = THREE.SRGBColorSpace
     tex.wrapS = THREE.RepeatWrapping
     tex.wrapT = THREE.RepeatWrapping
-    tex.repeat.set(50 / 3, 50 / 3)
-    tex.center.set(0.5, 0.5)
+    tex.repeat.set(16, 16) // 48 / 3 = 16, ensures exact alignment with origin
+    tex.anisotropy = 16
     tex.needsUpdate = true
     return tex
   }, [])
@@ -61,8 +61,12 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
       </PivotControls>
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color={showGrid ? "#ffffff" : "#d9c5b2"} map={showGrid ? matTexture : null} />
+        <planeGeometry args={[48, 48]} />
+        {showGrid ? (
+          <meshStandardMaterial color="#ffffff" map={matTexture} />
+        ) : (
+          <meshStandardMaterial color="#d9c5b2" />
+        )}
       </mesh>
       
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={10} blur={2} far={4} />
