@@ -421,7 +421,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
-          const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0.001)
+          const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
           const adjustedAngle = commitCount % 2 === 1 ? -activeCrease.angle : activeCrease.angle
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
@@ -435,7 +435,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
         const dist = toVertex.dot(fold.normal)
         if (dist > 0) {
-          const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0.001)
+          const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
@@ -461,7 +461,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
-          const pivotB = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, -0.001)
+          const pivotB = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
           const adjustedAngle = commitCount % 2 === 1 ? -activeCrease.angle : activeCrease.angle
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
@@ -475,7 +475,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
         const dist = toVertex.dot(fold.normal)
         if (dist > 0) {
-          const pivotB = new THREE.Vector3(fold.p1.x, fold.p1.y, -0.001)
+          const pivotB = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
           vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
