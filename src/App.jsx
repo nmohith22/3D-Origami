@@ -147,7 +147,7 @@ function App() {
           style={{ background: isSticky ? '#362e26' : 'transparent', color: isSticky ? '#fff' : 'var(--color-text-main)', padding: '12px', display: 'flex', borderRadius: '50%' }}
           onClick={() => setIsSticky(!isSticky)}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span style={{ fontSize: '22px', lineHeight: '22px' }}>💧</span>
         </button>
 
         <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 5px' }}></div>
@@ -192,7 +192,8 @@ function App() {
 
       <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 10, color: '#888', fontSize: '0.9rem', pointerEvents: 'none' }}>
         <p>Left Click + Drag: {mode === 'fold' ? 'Fold Paper' : mode === 'transform' ? 'Transform Model' : 'Orbit Camera'}</p>
-        <p>Right Click + Drag: Pan Camera (When Camera Mode Active)</p>
+        <p>Right Click + Drag: Orbit Camera (Any Mode)</p>
+        <p>Scroll Wheel: Zoom</p>
       </div>
 
       <Canvas shadows camera={{ position: [0, 5, 8], fov: 45 }}>

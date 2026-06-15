@@ -274,24 +274,20 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       
       let maxFoldCount = 0
       for (let i = 0; i < originalPositions.length; i += 3) {
-        let vTest = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        let vOrig = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
         let count = 0
         for (const fold of committedFolds) {
-          const toVertex = new THREE.Vector3().subVectors(vTest, fold.p1)
+          const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
           if (toVertex.dot(fold.normal) > 0) {
-            const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-            vTest.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
             count++
           }
         }
-        const toActive = new THREE.Vector3().subVectors(vTest, activeP1)
+        const toActive = new THREE.Vector3().subVectors(vOrig, activeP1)
         if (toActive.dot(activeNormal) > 0) {
           count++
         }
-        if (count > 8) {
-          maxFoldCount = count
-          break
-        }
+        if (count > maxFoldCount) maxFoldCount = count
+        if (maxFoldCount > 8) break
       }
       
       if (maxFoldCount > 8) {
@@ -387,27 +383,30 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     }
 
     for (let i = 0; i < positions.length; i += 3) {
+      let vOrig = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+      
       let vf = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0.001)
       let countF = 0
       let liftF = 0
 
-      for (const fold of committedFolds) {
-        const toVertex = new THREE.Vector3().subVectors(vf, fold.p1)
-        if (toVertex.dot(fold.normal) > 0) {
-          const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          vf.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
-          countF++
-          liftF += 0.004
-        }
-      }
-
       if (activeCrease) {
-        const toVertex = new THREE.Vector3().subVectors(vf, activeCrease.p1)
+        const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
         if (toVertex.dot(activeCrease.normal) > 0) {
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
           vf.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
           countF++
           liftF += 0.004 * (activeCrease.angle / Math.PI)
+        }
+      }
+
+      for (let j = committedFolds.length - 1; j >= 0; j--) {
+        const fold = committedFolds[j]
+        const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
+        if (toVertex.dot(fold.normal) > 0) {
+          const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
+          vf.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          countF++
+          liftF += 0.004
         }
       }
       
@@ -425,23 +424,24 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       let countB = 0
       let liftB = 0
 
-      for (const fold of committedFolds) {
-        const toVertex = new THREE.Vector3().subVectors(vb, fold.p1)
-        if (toVertex.dot(fold.normal) > 0) {
-          const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          vb.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
-          countB++
-          liftB += 0.004
-        }
-      }
-
       if (activeCrease) {
-        const toVertex = new THREE.Vector3().subVectors(vb, activeCrease.p1)
+        const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
         if (toVertex.dot(activeCrease.normal) > 0) {
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
           vb.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
           countB++
           liftB += 0.004 * (activeCrease.angle / Math.PI)
+        }
+      }
+
+      for (let j = committedFolds.length - 1; j >= 0; j--) {
+        const fold = committedFolds[j]
+        const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
+        if (toVertex.dot(fold.normal) > 0) {
+          const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
+          vb.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          countB++
+          liftB += 0.004
         }
       }
 
