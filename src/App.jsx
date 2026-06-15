@@ -27,12 +27,10 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[48, 48]} />
-        <meshStandardMaterial color={showGrid ? "#3a5a40" : "#d9c5b2"} />
+        <meshStandardMaterial color="#3a5a40" />
       </mesh>
       
-      {showGrid && (
-        <gridHelper args={[48, 48 * (32 / 3), '#ffffff', '#ffffff']} position={[0, 0.001, 0]} material-opacity={0.3} material-transparent={true} />
-      )}
+      <gridHelper args={[48, 48 * (32 / 3), '#ffffff', '#ffffff']} position={[0, 0.001, 0]} material-opacity={0.3} material-transparent={true} />
       
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={10} blur={2} far={4} />
       

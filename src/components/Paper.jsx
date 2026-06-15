@@ -156,6 +156,23 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     
     ctx.fillStyle = '#000000'
     ctx.fillRect(0, 0, 1024, 1024)
+
+    if (showGrid) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+      ctx.lineWidth = 2
+      const step = 1024 / GRID_SIZE
+      for (let i = 0; i <= GRID_SIZE; i++) {
+        ctx.beginPath()
+        ctx.moveTo(i * step, 0)
+        ctx.lineTo(i * step, 1024)
+        ctx.stroke()
+        
+        ctx.beginPath()
+        ctx.moveTo(0, i * step)
+        ctx.lineTo(1024, i * step)
+        ctx.stroke()
+      }
+    }
     
     ctx.fillStyle = '#ffffff'
     const hlWidth = 16
@@ -196,7 +213,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     const tex = new THREE.CanvasTexture(canvas)
     tex.needsUpdate = true
     return tex
-  }, [active, hoveredHandle, hoveredPoint, hoveredVLine, hoveredHLine])
+  }, [active, hoveredHandle, hoveredPoint, hoveredVLine, hoveredHLine, showGrid])
 
   const bind = useDrag(({ movement: [mx, my], active: dragActive, cancel, event, first }) => {
     if (mode !== 'fold') {
