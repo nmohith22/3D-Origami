@@ -13,8 +13,8 @@ const initialHandles = [
   { id: 'c_tr', type: 'corner', p: new THREE.Vector2(1.5, 1.5) },
   { id: 'c_br', type: 'corner', p: new THREE.Vector2(1.5, -1.5) },
   { id: 'c_bl', type: 'corner', p: new THREE.Vector2(-1.5, -1.5) },
-  { id: 'e_t', type: 'edge', p: new THREE.Vector2(0, 1.5), normal: new THREE.Vector2(0, 1), p1: new THREE.Vector2(-1.5, 1.5), p2: new THREE.Vector2(1.5, 1.5) },
-  { id: 'e_r', type: 'edge', p: new THREE.Vector2(1.5, 0), normal: new THREE.Vector2(1, 0), p1: new THREE.Vector2(1.5, 1.5), p2: new THREE.Vector2(1.5, -1.5) },
+  { id: 'e_t', type: 'edge', p: new THREE.Vector2(0, 1.5), normal: new THREE.Vector2(0, -1), p1: new THREE.Vector2(-1.5, 1.5), p2: new THREE.Vector2(1.5, 1.5) },
+  { id: 'e_r', type: 'edge', p: new THREE.Vector2(1.5, 0), normal: new THREE.Vector2(-1, 0), p1: new THREE.Vector2(1.5, 1.5), p2: new THREE.Vector2(1.5, -1.5) },
   { id: 'e_b', type: 'edge', p: new THREE.Vector2(0, -1.5), normal: new THREE.Vector2(0, 1), p1: new THREE.Vector2(-1.5, -1.5), p2: new THREE.Vector2(1.5, -1.5) },
   { id: 'e_l', type: 'edge', p: new THREE.Vector2(-1.5, 0), normal: new THREE.Vector2(1, 0), p1: new THREE.Vector2(-1.5, 1.5), p2: new THREE.Vector2(-1.5, -1.5) },
 ]
@@ -72,7 +72,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         arr.push({ id: `f${index}_c2`, type: 'corner', p: i2 })
         
         const mid = new THREE.Vector2().addVectors(i1, i2).multiplyScalar(0.5)
-        const edgeNormal = new THREE.Vector2(fold.normal.x, fold.normal.y).normalize()
+        const edgeNormal = new THREE.Vector2(-fold.normal.x, -fold.normal.y).normalize()
         
         arr.push({ 
           id: `f${index}_e`, 
@@ -84,20 +84,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         })
       }
     })
-    const isHandleFolded = (p) => {
-      let v = new THREE.Vector3(p.x, p.y, 0)
-      for (let j = committedFolds.length - 1; j >= 0; j--) {
-        const fold = committedFolds[j]
-        const toVertex = new THREE.Vector3().subVectors(v, fold.p1)
-        if (toVertex.dot(fold.normal) > 0) return true
-      }
-      return false
-    }
     
-    return arr.filter(h => {
-      if (h.id.startsWith('f')) return true // Crease handles are mathematically on the fold line, never strictly "folded"
-      return !isHandleFolded(h.p)
-    })
+    return arr
   }, [committedFolds])
 
   const getGrabHandle = (x, y) => {
