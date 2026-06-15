@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react'
+import React, { Suspense, useState, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows, PivotControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -6,6 +6,41 @@ import { Paper } from './components/Paper'
 import './index.css'
 
 function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
+  const matTexture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 1024
+    const ctx = canvas.getContext('2d')
+    
+    ctx.fillStyle = '#3a5a40' // Craft mat green
+    ctx.fillRect(0, 0, 1024, 1024)
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+    ctx.lineWidth = 2
+    const GRID_SIZE = 32
+    const step = 1024 / GRID_SIZE
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      ctx.beginPath()
+      ctx.moveTo(i * step, 0)
+      ctx.lineTo(i * step, 1024)
+      ctx.stroke()
+      
+      ctx.beginPath()
+      ctx.moveTo(0, i * step)
+      ctx.lineTo(1024, i * step)
+      ctx.stroke()
+    }
+    
+    const tex = new THREE.CanvasTexture(canvas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.wrapS = THREE.RepeatWrapping
+    tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(50 / 3, 50 / 3)
+    tex.center.set(0.5, 0.5)
+    tex.needsUpdate = true
+    return tex
+  }, [])
+
   return (
     <>
       <ambientLight intensity={0.5} />
@@ -27,7 +62,7 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color="#d9c5b2" />
+        <meshStandardMaterial color={showGrid ? "#ffffff" : "#d9c5b2"} map={showGrid ? matTexture : null} />
       </mesh>
       
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={10} blur={2} far={4} />
@@ -139,6 +174,19 @@ function App() {
           onClick={() => setMode('transform')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h6"/><path d="M15 12h6"/><path d="M12 3v6"/><path d="M12 15v6"/></svg>
+        </button>
+
+        <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 5px' }}></div>
+
+        <button 
+          className="cozy-btn" title="Clear Canvas"
+          style={{ background: 'transparent', color: 'var(--color-text-main)', padding: '12px', display: 'flex', borderRadius: '50%', cursor: 'pointer' }}
+          onClick={() => {
+            setCommittedFolds([])
+            setUndoneFolds([])
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         </button>
       </div>
 

@@ -89,62 +89,52 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
   }, [committedFolds])
 
   const getGrabHandle = (x, y) => {
-    let closest = null
-    let minDistSq = 0.5 * 0.5
+    let closestCorner = null
+    let minCornerDistSq = 0.4 * 0.4
     
     for (const h of handles) {
       if (h.type !== 'corner') continue
       const dSq = (h.p.x - x)**2 + (h.p.y - y)**2
-      if (dSq < minDistSq) {
-        closest = h
-        minDistSq = dSq
+      if (dSq < minCornerDistSq) {
+        closestCorner = h
+        minCornerDistSq = dSq
       }
     }
     
-    if (closest) return closest
+    if (closestCorner) return closestCorner
     
-    minDistSq = 0.5 * 0.5
+    let closestEdge = null
+    let minEdgeDistSq = 0.4 * 0.4
+    let edgeGrabPoint = null
+
     for (const h of handles) {
       if (h.type !== 'edge') continue
-      const dSq = (h.p.x - x)**2 + (h.p.y - y)**2
-      if (dSq < minDistSq) {
-        closest = h
-        minDistSq = dSq
+      
+      const l2 = (h.p2.x - h.p1.x)**2 + (h.p2.y - h.p1.y)**2;
+      let dSq, projX, projY;
+      if (l2 === 0) {
+        dSq = (x - h.p1.x)**2 + (y - h.p1.y)**2;
+        projX = h.p1.x; projY = h.p1.y;
+      } else {
+        let t = ((x - h.p1.x) * (h.p2.x - h.p1.x) + (y - h.p1.y) * (h.p2.y - h.p1.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        projX = h.p1.x + t * (h.p2.x - h.p1.x);
+        projY = h.p1.y + t * (h.p2.y - h.p1.y);
+        dSq = (x - projX)**2 + (y - projY)**2;
+      }
+      
+      if (dSq < minEdgeDistSq) {
+        closestEdge = h
+        minEdgeDistSq = dSq
+        edgeGrabPoint = new THREE.Vector2(projX, projY)
       }
     }
     
-    return closest
+    if (closestEdge) return { ...closestEdge, p: edgeGrabPoint }
+    return null
   }
 
-  const gridTexture = useMemo(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1024
-    canvas.height = 1024
-    const ctx = canvas.getContext('2d')
-    
-    ctx.fillStyle = '#ffffff' 
-    ctx.fillRect(0, 0, 1024, 1024)
-    
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'
-    ctx.lineWidth = 2
-    const step = 1024 / GRID_SIZE
-    for (let i = 0; i <= GRID_SIZE; i++) {
-      ctx.beginPath()
-      ctx.moveTo(i * step, 0)
-      ctx.lineTo(i * step, 1024)
-      ctx.stroke()
-      
-      ctx.beginPath()
-      ctx.moveTo(0, i * step)
-      ctx.lineTo(1024, i * step)
-      ctx.stroke()
-    }
-    
-    const tex = new THREE.CanvasTexture(canvas)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.needsUpdate = true
-    return tex
-  }, [])
+
 
   const emissiveTexture = useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -276,6 +266,39 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       const clampedT = Math.max(0, Math.min(1, t))
       angle = Math.acos(1 - 2 * clampedT)
     }
+
+    if (angle > 0) {
+      const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
+      const activeNormal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
+      const activeP1 = new THREE.Vector3(midpoint.x, midpoint.y, 0)
+      
+      let maxFoldCount = 0
+      for (let i = 0; i < originalPositions.length; i += 3) {
+        let vTest = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        let count = 0
+        for (const fold of committedFolds) {
+          const toVertex = new THREE.Vector3().subVectors(vTest, fold.p1)
+          if (toVertex.dot(fold.normal) > 0) {
+            const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
+            vTest.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+            count++
+          }
+        }
+        const toActive = new THREE.Vector3().subVectors(vTest, activeP1)
+        if (toActive.dot(activeNormal) > 0) {
+          count++
+        }
+        if (count > 8) {
+          maxFoldCount = count
+          break
+        }
+      }
+      
+      if (maxFoldCount > 8) {
+        angle = 0 // Prevent folding if it exceeds 8 layers
+      }
+    }
+
     dragState.current.angle = angle
 
     if (!dragActive) {
@@ -283,7 +306,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       setHoveredVLine(null)
       setHoveredPoint(null)
 
-      if (A.distanceTo(B) > 0.1) {
+      if (A.distanceTo(B) > 0.1 && angle > 0) {
         let finalAngle = angle
         if (!isSticky) {
           if (angle > Math.PI * 0.85) {
@@ -340,7 +363,14 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
     const positions = frontGeomRef.current.attributes.position.array
     const backPositions = backGeomRef.current.attributes.position.array
-    const v = new THREE.Vector3()
+
+    if (!frontGeomRef.current.attributes.color) {
+      const colors = new Float32Array(originalPositions.length)
+      frontGeomRef.current.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+      backGeomRef.current.setAttribute('color', new THREE.BufferAttribute(colors.slice(), 3))
+    }
+    const frontColors = frontGeomRef.current.attributes.color.array
+    const backColors = backGeomRef.current.attributes.color.array
 
     let activeCrease = null
     if (active && dragState.current.A && dragState.current.B && dragState.current.A.distanceTo(dragState.current.B) > 0.01) {
@@ -357,35 +387,79 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     }
 
     for (let i = 0; i < positions.length; i += 3) {
-      v.set(originalPositions[i], originalPositions[i+1], originalPositions[i+2])
+      let vf = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0.001)
+      let countF = 0
+      let liftF = 0
 
       for (const fold of committedFolds) {
-        const toVertex = new THREE.Vector3().subVectors(v, fold.p1)
+        const toVertex = new THREE.Vector3().subVectors(vf, fold.p1)
         if (toVertex.dot(fold.normal) > 0) {
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          v.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          vf.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          countF++
+          liftF += 0.004
         }
       }
 
       if (activeCrease) {
-        const toVertex = new THREE.Vector3().subVectors(v, activeCrease.p1)
+        const toVertex = new THREE.Vector3().subVectors(vf, activeCrease.p1)
         if (toVertex.dot(activeCrease.normal) > 0) {
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
-          v.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
+          vf.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
+          countF++
+          liftF += 0.004 * (activeCrease.angle / Math.PI)
+        }
+      }
+      
+      vf.z += liftF
+      positions[i] = vf.x
+      positions[i+1] = vf.y 
+      positions[i+2] = vf.z
+
+      const densityF = Math.max(0, 1 - countF * 0.1)
+      frontColors[i] = 1.0 * densityF
+      frontColors[i+1] = 0.56 * densityF
+      frontColors[i+2] = 0.64 * densityF
+
+      let vb = new THREE.Vector3(originalPositions[i], originalPositions[i+1], -0.001)
+      let countB = 0
+      let liftB = 0
+
+      for (const fold of committedFolds) {
+        const toVertex = new THREE.Vector3().subVectors(vb, fold.p1)
+        if (toVertex.dot(fold.normal) > 0) {
+          const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
+          vb.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          countB++
+          liftB += 0.004
         }
       }
 
-      positions[i] = v.x
-      positions[i+1] = v.y 
-      positions[i+2] = v.z
+      if (activeCrease) {
+        const toVertex = new THREE.Vector3().subVectors(vb, activeCrease.p1)
+        if (toVertex.dot(activeCrease.normal) > 0) {
+          const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
+          vb.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
+          countB++
+          liftB += 0.004 * (activeCrease.angle / Math.PI)
+        }
+      }
 
-      backPositions[i] = v.x
-      backPositions[i+1] = -v.y
-      backPositions[i+2] = -v.z
+      vb.z += liftB
+      backPositions[i] = vb.x
+      backPositions[i+1] = vb.y 
+      backPositions[i+2] = vb.z
+
+      const densityB = Math.max(0.3, 1 - countB * 0.1)
+      backColors[i] = 1.0 * densityB
+      backColors[i+1] = 1.0 * densityB
+      backColors[i+2] = 1.0 * densityB
     }
 
     frontGeomRef.current.attributes.position.needsUpdate = true
     backGeomRef.current.attributes.position.needsUpdate = true
+    frontGeomRef.current.attributes.color.needsUpdate = true
+    backGeomRef.current.attributes.color.needsUpdate = true
     frontGeomRef.current.computeVertexNormals()
     backGeomRef.current.computeVertexNormals()
     frontGeomRef.current.computeBoundingSphere()
@@ -403,10 +477,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       >
         <planeGeometry ref={frontGeomRef} args={[PAPER_SIZE, PAPER_SIZE, 64, 64]} />
         <meshStandardMaterial 
-          color="#ff8fa3" 
+          color="#ffffff" 
           side={THREE.FrontSide} 
+          vertexColors={true}
           roughness={0.8} 
-          map={showGrid ? gridTexture : null}
           emissive={emissiveTexture ? "#ffffff" : "#000000"}
           emissiveIntensity={1}
           emissiveMap={emissiveTexture}
@@ -414,8 +488,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       </mesh>
       
       <mesh 
-        rotation={[Math.PI / 2, 0, 0]} 
-        position={[0, -0.005, 0]} 
+        rotation={[-Math.PI / 2, 0, 0]} 
         castShadow 
         receiveShadow
         onPointerMove={handlePointerMove}
@@ -424,9 +497,9 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         <planeGeometry ref={backGeomRef} args={[PAPER_SIZE, PAPER_SIZE, 64, 64]} />
         <meshStandardMaterial 
           color="#ffffff" 
-          side={THREE.FrontSide} 
+          side={THREE.BackSide} 
+          vertexColors={true}
           roughness={0.8} 
-          map={showGrid ? gridTexture : null}
           emissive={emissiveTexture ? "#ffffff" : "#000000"}
           emissiveIntensity={1}
           emissiveMap={emissiveTexture}
