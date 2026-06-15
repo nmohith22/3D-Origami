@@ -72,7 +72,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         arr.push({ id: `f${index}_c2`, type: 'corner', p: i2 })
         
         const mid = new THREE.Vector2().addVectors(i1, i2).multiplyScalar(0.5)
-        const edgeNormal = new THREE.Vector2(-fold.normal.x, -fold.normal.y).normalize()
+        const edgeNormal = new THREE.Vector2(fold.normal.x, fold.normal.y).normalize()
         
         arr.push({ 
           id: `f${index}_e`, 
