@@ -84,8 +84,20 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         })
       }
     })
+    const isHandleFolded = (p) => {
+      let v = new THREE.Vector3(p.x, p.y, 0)
+      for (let j = committedFolds.length - 1; j >= 0; j--) {
+        const fold = committedFolds[j]
+        const toVertex = new THREE.Vector3().subVectors(v, fold.p1)
+        if (toVertex.dot(fold.normal) > 0) return true
+      }
+      return false
+    }
     
-    return arr
+    return arr.filter(h => {
+      if (h.id.startsWith('f')) return true // Crease handles are mathematically on the fold line, never strictly "folded"
+      return !isHandleFolded(h.p)
+    })
   }, [committedFolds])
 
   const getGrabHandle = (x, y) => {
@@ -229,7 +241,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     let B = new THREE.Vector2()
     if (handle.type === 'edge') {
       const rawDir = new THREE.Vector2(rawBx - handle.p.x, rawBy - handle.p.y)
-      const projection = rawDir.dot(handle.normal)
+      let projection = rawDir.dot(handle.normal)
+      projection = Math.max(0, projection) // Prevent dragging outwards (unfolding) which causes math glitches
       const projectedX = handle.p.x + handle.normal.x * projection
       const projectedY = handle.p.y + handle.normal.y * projection
       

@@ -6,43 +6,6 @@ import { Paper } from './components/Paper'
 import './index.css'
 
 function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
-  const [matTexture, setMatTexture] = useState(null)
-
-  useEffect(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 1024
-    canvas.height = 1024
-    const ctx = canvas.getContext('2d')
-    
-    ctx.fillStyle = '#3a5a40' // Craft mat green
-    ctx.fillRect(0, 0, 1024, 1024)
-    
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
-    ctx.lineWidth = 4
-    const GRID_SIZE = 32
-    const step = 1024 / GRID_SIZE
-    for (let i = 0; i <= GRID_SIZE; i++) {
-      ctx.beginPath()
-      ctx.moveTo(i * step, 0)
-      ctx.lineTo(i * step, 1024)
-      ctx.stroke()
-      
-      ctx.beginPath()
-      ctx.moveTo(0, i * step)
-      ctx.lineTo(1024, i * step)
-      ctx.stroke()
-    }
-    
-    const tex = new THREE.CanvasTexture(canvas)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.wrapS = THREE.RepeatWrapping
-    tex.wrapT = THREE.RepeatWrapping
-    tex.repeat.set(16, 16) // 48 / 3 = 16, ensures exact alignment with origin
-    tex.anisotropy = 16
-    tex.needsUpdate = true
-    setMatTexture(tex)
-  }, [])
-
   return (
     <>
       <ambientLight intensity={0.5} />
@@ -64,12 +27,12 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[48, 48]} />
-        {showGrid && matTexture ? (
-          <meshStandardMaterial color="#ffffff" map={matTexture} />
-        ) : (
-          <meshStandardMaterial color="#d9c5b2" />
-        )}
+        <meshStandardMaterial color={showGrid ? "#3a5a40" : "#d9c5b2"} />
       </mesh>
+      
+      {showGrid && (
+        <gridHelper args={[48, 48 * (32 / 3), '#ffffff', '#ffffff']} position={[0, 0.001, 0]} material-opacity={0.3} material-transparent={true} />
+      )}
       
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={10} blur={2} far={4} />
       
@@ -154,7 +117,7 @@ function App() {
           style={{ background: isSticky ? '#362e26' : 'transparent', color: isSticky ? '#fff' : 'var(--color-text-main)', padding: '12px', display: 'flex', borderRadius: '50%' }}
           onClick={() => setIsSticky(!isSticky)}
         >
-          <span style={{ fontSize: '22px', lineHeight: '22px' }}>💧</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
         </button>
 
         <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 5px' }}></div>
