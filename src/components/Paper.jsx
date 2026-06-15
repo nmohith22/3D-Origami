@@ -411,12 +411,19 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       let countF = 0
       let totalLiftF = 0
 
+      let commitCount = 0
+      for (const fold of committedFolds) {
+        const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
+        if (toVertex.dot(fold.normal) > 0) commitCount++
+      }
+
       if (activeCrease) {
         const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
           const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0.001)
-          const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
+          const adjustedAngle = commitCount % 2 === 1 ? -activeCrease.angle : activeCrease.angle
+          const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
           totalLiftF += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
@@ -455,7 +462,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
           const pivotB = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, -0.001)
-          const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
+          const adjustedAngle = commitCount % 2 === 1 ? -activeCrease.angle : activeCrease.angle
+          const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
           totalLiftB += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
