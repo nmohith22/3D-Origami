@@ -1,4 +1,4 @@
-import React, { Suspense, useState, useMemo } from 'react'
+import React, { Suspense, useState, useMemo, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows, PivotControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -6,7 +6,9 @@ import { Paper } from './components/Paper'
 import './index.css'
 
 function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
-  const matTexture = useMemo(() => {
+  const [matTexture, setMatTexture] = useState(null)
+
+  useEffect(() => {
     const canvas = document.createElement('canvas')
     canvas.width = 1024
     canvas.height = 1024
@@ -38,7 +40,7 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
     tex.repeat.set(16, 16) // 48 / 3 = 16, ensures exact alignment with origin
     tex.anisotropy = 16
     tex.needsUpdate = true
-    return tex
+    setMatTexture(tex)
   }, [])
 
   return (
@@ -62,7 +64,7 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[48, 48]} />
-        {showGrid ? (
+        {showGrid && matTexture ? (
           <meshStandardMaterial color="#ffffff" map={matTexture} />
         ) : (
           <meshStandardMaterial color="#d9c5b2" />
@@ -139,6 +141,22 @@ function App() {
         <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 5px' }}></div>
 
         <button 
+          className="cozy-btn" title="Undo Last Fold"
+          style={{ background: '#362e26', color: '#fff', padding: '12px', display: 'flex', borderRadius: '50%', opacity: committedFolds.length > 0 ? 1 : 0.5 }}
+          onClick={() => setCommittedFolds(prev => prev.slice(0, -1))}
+          disabled={committedFolds.length === 0}
+        >
+          ↩️
+        </button>
+        <button 
+          className="cozy-btn" title="Clear Canvas"
+          style={{ background: '#362e26', color: '#fff', padding: '12px', display: 'flex', borderRadius: '50%', opacity: committedFolds.length > 0 ? 1 : 0.5 }}
+          onClick={() => setCommittedFolds([])}
+          disabled={committedFolds.length === 0}
+        >
+          🗑️
+        </button>
+        <button 
           className="cozy-btn" title="Toggle Grid Overlay"
           style={{ background: showGrid ? '#362e26' : 'transparent', color: showGrid ? '#fff' : 'var(--color-text-main)', padding: '12px', display: 'flex', borderRadius: '50%' }}
           onClick={() => setShowGrid(!showGrid)}
@@ -195,7 +213,7 @@ function App() {
       </div>
 
       <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 10, color: '#888', fontSize: '0.9rem', pointerEvents: 'none' }}>
-        <p>Left Click + Drag: {mode === 'fold' ? 'Fold Paper' : mode === 'transform' ? 'Transform Model' : 'Orbit Camera'}</p>
+        <p>Left Click + Drag: {mode === 'fold' ? 'Add New Fold' : mode === 'transform' ? 'Transform Model' : 'Orbit Camera'}</p>
         <p>Right Click + Drag: Orbit Camera (Any Mode)</p>
         <p>Scroll Wheel: Zoom</p>
       </div>
