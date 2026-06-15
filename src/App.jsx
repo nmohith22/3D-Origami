@@ -140,22 +140,7 @@ function App() {
 
         <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 5px' }}></div>
 
-        <button 
-          className="cozy-btn" title="Undo Last Fold"
-          style={{ background: '#362e26', color: '#fff', padding: '12px', display: 'flex', borderRadius: '50%', opacity: committedFolds.length > 0 ? 1 : 0.5 }}
-          onClick={() => setCommittedFolds(prev => prev.slice(0, -1))}
-          disabled={committedFolds.length === 0}
-        >
-          ↩️
-        </button>
-        <button 
-          className="cozy-btn" title="Clear Canvas"
-          style={{ background: '#362e26', color: '#fff', padding: '12px', display: 'flex', borderRadius: '50%', opacity: committedFolds.length > 0 ? 1 : 0.5 }}
-          onClick={() => setCommittedFolds([])}
-          disabled={committedFolds.length === 0}
-        >
-          🗑️
-        </button>
+
         <button 
           className="cozy-btn" title="Toggle Grid Overlay"
           style={{ background: showGrid ? '#362e26' : 'transparent', color: showGrid ? '#fff' : 'var(--color-text-main)', padding: '12px', display: 'flex', borderRadius: '50%' }}
