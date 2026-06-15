@@ -310,6 +310,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           } else {
             return 
           }
+        } else {
+          // Magnetic snapping for Sticky Mode to make it easier to use
+          if (finalAngle > Math.PI * 0.95) finalAngle = Math.PI
+          else if (Math.abs(finalAngle - Math.PI / 2) < 0.08) finalAngle = Math.PI / 2
         }
         
         const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
@@ -387,30 +391,34 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       
       let vf = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0.001)
       let countF = 0
-      let liftF = 0
+      let totalLiftF = 0
 
       if (activeCrease) {
         const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
-        if (toVertex.dot(activeCrease.normal) > 0) {
+        const dist = toVertex.dot(activeCrease.normal)
+        if (dist > 0) {
+          const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0.001)
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
-          vf.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
+          vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
-          liftF += 0.004 * (activeCrease.angle / Math.PI)
+          totalLiftF += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
         }
       }
 
       for (let j = committedFolds.length - 1; j >= 0; j--) {
         const fold = committedFolds[j]
         const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
-        if (toVertex.dot(fold.normal) > 0) {
+        const dist = toVertex.dot(fold.normal)
+        if (dist > 0) {
+          const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0.001)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          vf.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
-          liftF += 0.004
+          totalLiftF += 0.004 * Math.min(1, dist / 0.1)
         }
       }
       
-      vf.z += liftF
+      vf.z += totalLiftF
       positions[i] = vf.x
       positions[i+1] = vf.y 
       positions[i+2] = vf.z
@@ -422,30 +430,34 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
       let vb = new THREE.Vector3(originalPositions[i], originalPositions[i+1], -0.001)
       let countB = 0
-      let liftB = 0
+      let totalLiftB = 0
 
       if (activeCrease) {
         const toVertex = new THREE.Vector3().subVectors(vOrig, activeCrease.p1)
-        if (toVertex.dot(activeCrease.normal) > 0) {
+        const dist = toVertex.dot(activeCrease.normal)
+        if (dist > 0) {
+          const pivotB = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, -0.001)
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
-          vb.sub(activeCrease.p1).applyMatrix4(rot).add(activeCrease.p1)
+          vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
-          liftB += 0.004 * (activeCrease.angle / Math.PI)
+          totalLiftB += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
         }
       }
 
       for (let j = committedFolds.length - 1; j >= 0; j--) {
         const fold = committedFolds[j]
         const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
-        if (toVertex.dot(fold.normal) > 0) {
+        const dist = toVertex.dot(fold.normal)
+        if (dist > 0) {
+          const pivotB = new THREE.Vector3(fold.p1.x, fold.p1.y, -0.001)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          vb.sub(fold.p1).applyMatrix4(rot).add(fold.p1)
+          vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
-          liftB += 0.004
+          totalLiftB += 0.004 * Math.min(1, dist / 0.1)
         }
       }
 
-      vb.z += liftB
+      vb.z += totalLiftB
       backPositions[i] = vb.x
       backPositions[i+1] = vb.y 
       backPositions[i+2] = vb.z
