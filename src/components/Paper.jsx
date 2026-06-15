@@ -426,7 +426,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
-          totalLiftF += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
+          vf.z += 0.004 * (committedFolds.length + 1) * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
         }
       }
 
@@ -439,11 +439,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
           countF++
-          totalLiftF += 0.004 * Math.min(1, dist / 0.1)
+          vf.z += 0.004 * (j + 1) * Math.min(1, dist / 0.1)
         }
       }
       
-      vf.z += totalLiftF
       positions[i] = vf.x
       positions[i+1] = vf.y 
       positions[i+2] = vf.z
@@ -466,7 +465,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, adjustedAngle)
           vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
-          totalLiftB += 0.004 * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
+          vb.z += 0.004 * (committedFolds.length + 1) * Math.min(1, dist / 0.1) * (activeCrease.angle / Math.PI)
         }
       }
 
@@ -479,11 +478,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
           vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
           countB++
-          totalLiftB += 0.004 * Math.min(1, dist / 0.1)
+          vb.z += 0.004 * (j + 1) * Math.min(1, dist / 0.1)
         }
       }
 
-      vb.z += totalLiftB
       backPositions[i] = vb.x
       backPositions[i+1] = vb.y 
       backPositions[i+2] = vb.z
