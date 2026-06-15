@@ -22,7 +22,6 @@ const initialHandles = [
 export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, ...props }) {
   const frontGeomRef = useRef()
   const backGeomRef = useRef()
-  const xrayGeomRef = useRef()
   
   const [active, setActive] = useState(false)
   const [hoveredHandle, setHoveredHandle] = useState(null)
@@ -503,11 +502,6 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     backGeomRef.current.computeVertexNormals()
     frontGeomRef.current.computeBoundingSphere()
     backGeomRef.current.computeBoundingSphere()
-
-    if (xrayGeomRef.current) {
-      xrayGeomRef.current.attributes.position.array.set(frontGeomRef.current.attributes.position.array)
-      xrayGeomRef.current.attributes.position.needsUpdate = true
-    }
   })
 
   return (
@@ -547,22 +541,6 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           emissive={emissiveTexture ? "#ffffff" : "#000000"}
           emissiveIntensity={1}
           emissiveMap={emissiveTexture}
-        />
-      </mesh>
-
-      {/* X-Ray Highlight Overlay */}
-      <mesh 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        renderOrder={10}
-      >
-        <planeGeometry ref={xrayGeomRef} args={[PAPER_SIZE, PAPER_SIZE, 64, 64]} />
-        <meshBasicMaterial 
-          color="#ffffff" 
-          map={emissiveTexture}
-          blending={THREE.AdditiveBlending}
-          depthTest={false}
-          transparent={true}
-          opacity={0.8}
         />
       </mesh>
     </group>
