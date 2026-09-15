@@ -313,6 +313,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       }
     }
 
+    // ponytail: O(v * f) vertex deformation loop in JS. Ceiling is ~10k vertices or ~20 folds before main thread drops frames. Upgrade path: Web Worker first, then AssemblyScript/Wasm if worker serialisation overhead dominates, WebGPU compute shader only if geometry is dynamic beyond CPU limits.
     dragState.current.angle = angle
 
     if (!dragActive) {
