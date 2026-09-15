@@ -260,8 +260,13 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       currentProj.set(rawBx, rawBy)
     }
     
-    // Do NOT snap B to grid during drag to ensure buttery smooth rope-like tracking!
-    let B = new THREE.Vector2(currentProj.x, currentProj.y)
+    // Smooth B_max rope logic! Outward pull sets the crease, inward pull lifts in 3D!
+    if (!dragState.current.B_max || handle.p.distanceTo(currentProj) >= handle.p.distanceTo(dragState.current.B_max)) {
+      dragState.current.B_max = currentProj.clone()
+    }
+    
+    // Do NOT snap to grid during drag for perfectly fluid rope tracking
+    let B = new THREE.Vector2(dragState.current.B_max.x, dragState.current.B_max.y)
     
     if (handle.type === 'edge') {
       if (Math.abs(handle.normal.y) < 0.01) {
@@ -289,47 +294,21 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     let activeP1 = new THREE.Vector2()
     const A = handle.p
     if (A.distanceTo(B) > 0.01) {
-      const dist = A.distanceTo(currentProj) // Use smooth un-snapped distance for buttery tracking
+      const distToCursor = A.distanceTo(currentProj) 
+      const L = A.distanceTo(B) / 2
       
-      // We must use a fixed angle. If angle is too small, L becomes massive and rotates the whole paper without folding.
-      // 0.85 * PI (153 degrees) provides a beautiful 3D tent shape where the crease stays on the paper.
-      angle = isSticky ? Math.PI * 0.85 : Math.PI
+      // True Rope Physics Tracking:
+      let cosTheta = 1 - (distToCursor / L)
+      cosTheta = Math.max(-1, Math.min(1, cosTheta))
+      angle = Math.acos(cosTheta)
       
       const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
-      
-      // Calculate crease position so the tip EXACTLY matches the mouse projection
-      let L = dist / (1 - Math.cos(angle))
-      // Keep crease reasonably within paper bounds
-      L = Math.min(PAPER_SIZE * 1.5, L)
-      
       activeP1.addVectors(A, dirAB.clone().multiplyScalar(L))
     }
 
     if (angle > 0) {
       const activeNormal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
       const activeP13D = new THREE.Vector3(activeP1.x, activeP1.y, 0)
-      
-      let maxFoldCount = 0
-      for (let i = 0; i < originalPositions.length; i += 3) {
-        let vOrig = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
-        let count = 0
-        for (const fold of committedFolds) {
-          const toVertex = new THREE.Vector3().subVectors(vOrig, fold.p1)
-          if (toVertex.dot(fold.normal) > 0) {
-            count++
-          }
-        }
-        const toActive = new THREE.Vector3().subVectors(vOrig, activeP13D)
-        if (toActive.dot(activeNormal) > 0) {
-          count++
-        }
-        if (count > maxFoldCount) maxFoldCount = count
-        if (maxFoldCount > 8) break
-      }
-      
-      if (maxFoldCount > 8) {
-        angle = 0 // Prevent folding if it exceeds 8 layers
-      }
       
       const dirAB = new THREE.Vector2().subVectors(B, A)
       dragState.current.activeCrease = {
@@ -356,8 +335,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         
         if (!isSticky) {
           // In regular mode, force flat folding (Math.PI) 
-          if (angle > Math.PI * 0.85) finalAngle = Math.PI
-          else return // Require pulling far enough to commit
+          finalAngle = Math.PI
         } else {
           // Sticky mode: snap to flat if VERY close, otherwise preserve the fluid 3D angle they chose!
           if (finalAngle > Math.PI * 0.95) finalAngle = Math.PI
@@ -371,9 +349,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const normal = new THREE.Vector3(A.x - snappedB.x, A.y - snappedB.y, 0).normalize()
         
         // Recalculate p1 precisely using the snapped B so it aligns with the grid!
-        const dist = A.distanceTo(snappedB)
-        let L = dist / (1 - Math.cos(finalAngle))
-        L = Math.min(PAPER_SIZE * 1.5, L)
+        const L = A.distanceTo(snappedB) / 2
         const finalP1 = new THREE.Vector3(A.x, A.y, 0).add(new THREE.Vector3(normal.x, normal.y, 0).multiplyScalar(-L))
 
         onCommitFold({
@@ -440,7 +416,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
       for (let j = 0; j < committedFolds.length; j++) {
         const fold = committedFolds[j]
-        const toVertex = new THREE.Vector3().subVectors(vf, fold.p1)
+        const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        const toVertex = new THREE.Vector3().subVectors(origVertex, fold.p1)
         const dist = toVertex.dot(fold.normal)
         if (dist > 0) {
           const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
@@ -454,7 +431,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       }
 
       if (activeCrease) {
-        const toVertex = new THREE.Vector3().subVectors(vf, activeCrease.p1)
+        const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        const toVertex = new THREE.Vector3().subVectors(origVertex, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
           const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
@@ -480,7 +458,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
       for (let j = 0; j < committedFolds.length; j++) {
         const fold = committedFolds[j]
-        const toVertex = new THREE.Vector3().subVectors(vb, fold.p1)
+        const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        const toVertex = new THREE.Vector3().subVectors(origVertex, fold.p1)
         const dist = toVertex.dot(fold.normal)
         if (dist > 0) {
           const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
@@ -493,7 +472,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       }
 
       if (activeCrease) {
-        const toVertex = new THREE.Vector3().subVectors(vb, activeCrease.p1)
+        const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
+        const toVertex = new THREE.Vector3().subVectors(origVertex, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
           const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
