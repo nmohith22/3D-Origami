@@ -84,6 +84,20 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       
+      <Canvas shadows camera={{ position: [0, 5, 8], fov: 45 }}>
+        <Suspense fallback={null}>
+          <color attach="background" args={['#f9f6f0']} />
+          <Scene 
+            mode={mode} 
+            isSticky={isSticky} 
+            showGrid={showGrid}
+            committedFolds={committedFolds} 
+            onCommitFold={handleCommitFold}
+            onReplaceFold={handleReplaceFold}
+          />
+        </Suspense>
+      </Canvas>
+
       <div className="glass-panel" style={{
         position: 'absolute', top: '20px', right: '20px', padding: '10px', zIndex: 10, display: 'flex', gap: '10px', borderRadius: '50px'
       }}>
@@ -162,25 +176,11 @@ function App() {
         </button>
       </div>
 
-      <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 10, color: '#888', fontSize: '0.9rem', pointerEvents: 'none' }}>
-        <p>Left Click + Drag: {mode === 'fold' ? 'Add New Fold' : mode === 'transform' ? 'Transform Model' : 'Orbit Camera'}</p>
-        <p>Right Click + Drag: Orbit Camera (Any Mode)</p>
-        <p>Scroll Wheel: Zoom</p>
+      <div className="glass-panel" style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 9999, color: 'var(--color-text-main)', fontSize: '0.9rem', pointerEvents: 'none', padding: '15px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <p style={{ margin: 0, fontWeight: 500 }}>Left Click + Drag: <span style={{ fontWeight: 400 }}>{mode === 'fold' ? 'Add New Fold' : mode === 'transform' ? 'Transform Model' : 'Orbit Camera'}</span></p>
+        <p style={{ margin: 0, fontWeight: 500 }}>Right Click + Drag: <span style={{ fontWeight: 400 }}>Orbit Camera</span></p>
+        <p style={{ margin: 0, fontWeight: 500 }}>Scroll Wheel: <span style={{ fontWeight: 400 }}>Zoom</span></p>
       </div>
-
-      <Canvas shadows camera={{ position: [0, 5, 8], fov: 45 }}>
-        <Suspense fallback={null}>
-          <color attach="background" args={['#f9f6f0']} />
-          <Scene 
-            mode={mode} 
-            isSticky={isSticky} 
-            showGrid={showGrid}
-            committedFolds={committedFolds} 
-            onCommitFold={handleCommitFold}
-            onReplaceFold={handleReplaceFold}
-          />
-        </Suspense>
-      </Canvas>
     </div>
   )
 }
