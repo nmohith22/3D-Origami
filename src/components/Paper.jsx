@@ -21,7 +21,7 @@ const initialHandles = [
   { id: 'e_l', type: 'edge', p: new THREE.Vector2(-1.5, 0), normal: new THREE.Vector2(1, 0), p1: new THREE.Vector2(-1.5, 1.5), p2: new THREE.Vector2(-1.5, -1.5) },
 ]
 
-export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, ...props }) {
+export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, onReplaceFold, ...props }) {
   const frontGeomRef = useRef()
   const backGeomRef = useRef()
   
@@ -304,6 +304,21 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       
       const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
       activeP1.addVectors(A, dirAB.clone().multiplyScalar(L))
+      
+      // Check if we are editing an existing fold!
+      const activeNormal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
+      const activeP13D = new THREE.Vector3(activeP1.x, activeP1.y, 0)
+      
+      let editFoldId = null
+      for (const fold of committedFolds) {
+        if (fold.normal.dot(activeNormal) > 0.9 && fold.p1.distanceTo(activeP13D) < 0.3) {
+          editFoldId = fold.id
+          break
+        }
+      }
+      dragState.current.editingFoldId = editFoldId
+    } else {
+      dragState.current.editingFoldId = null
     }
 
     if (angle > 0) {
@@ -352,13 +367,20 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const L = A.distanceTo(snappedB) / 2
         const finalP1 = new THREE.Vector3(A.x, A.y, 0).add(new THREE.Vector3(normal.x, normal.y, 0).multiplyScalar(-L))
 
-        onCommitFold({
-          id: Date.now(),
+        const foldData = {
+          id: dragState.current.editingFoldId || Date.now(),
           p1: finalP1,
           axis,
           normal,
           angle: finalAngle
-        })
+        }
+
+        if (dragState.current.editingFoldId) {
+          onReplaceFold(dragState.current.editingFoldId, foldData)
+        } else {
+          onCommitFold(foldData)
+        }
+        dragState.current.editingFoldId = null
       }
     }
   })
@@ -416,6 +438,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
       for (let j = 0; j < committedFolds.length; j++) {
         const fold = committedFolds[j]
+        if (dragState.current?.editingFoldId === fold.id) continue
         const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
         const toVertex = new THREE.Vector3().subVectors(origVertex, fold.p1)
         const dist = toVertex.dot(fold.normal)
@@ -458,6 +481,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
       for (let j = 0; j < committedFolds.length; j++) {
         const fold = committedFolds[j]
+        if (dragState.current?.editingFoldId === fold.id) continue
         const origVertex = new THREE.Vector3(originalPositions[i], originalPositions[i+1], 0)
         const toVertex = new THREE.Vector3().subVectors(origVertex, fold.p1)
         const dist = toVertex.dot(fold.normal)

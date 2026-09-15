@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { Paper } from './components/Paper'
 import './index.css'
 
-function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
+function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold, onReplaceFold }) {
   return (
     <>
       <ambientLight intensity={0.5} />
@@ -22,7 +22,7 @@ function Scene({ mode, isSticky, showGrid, committedFolds, onCommitFold }) {
         scale={2}
         anchor={[0, 0, 0]} 
       >
-        <Paper position={[0, 0.05, 0]} mode={mode} isSticky={isSticky} showGrid={showGrid} committedFolds={committedFolds} onCommitFold={onCommitFold} />
+        <Paper position={[0, 0.05, 0]} mode={mode} isSticky={isSticky} showGrid={showGrid} committedFolds={committedFolds} onCommitFold={onCommitFold} onReplaceFold={onReplaceFold} />
       </PivotControls>
 
       <mesh receiveShadow position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -61,6 +61,10 @@ function App() {
   const handleCommitFold = (foldData) => {
     setCommittedFolds(prev => [...prev, foldData])
     setUndoneFolds([])
+  }
+
+  const handleReplaceFold = (foldId, newFoldData) => {
+    setCommittedFolds(prev => prev.map(f => f.id === foldId ? newFoldData : f))
   }
 
   const handleUndo = () => {
@@ -167,7 +171,14 @@ function App() {
       <Canvas shadows camera={{ position: [0, 5, 8], fov: 45 }}>
         <Suspense fallback={null}>
           <color attach="background" args={['#f9f6f0']} />
-          <Scene mode={mode} isSticky={isSticky} showGrid={showGrid} committedFolds={committedFolds} onCommitFold={handleCommitFold} />
+          <Scene 
+            mode={mode} 
+            isSticky={isSticky} 
+            showGrid={showGrid}
+            committedFolds={committedFolds} 
+            onCommitFold={handleCommitFold}
+            onReplaceFold={handleReplaceFold}
+          />
         </Suspense>
       </Canvas>
     </div>
