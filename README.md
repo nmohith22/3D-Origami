@@ -10,6 +10,8 @@ A browser-based 3D origami folding simulator built with React and Three.js. It a
 - **Dynamic Handle Spawning**: Every committed fold mathematically intersects the paper to generate new grabbable edges and corners along the newly formed creases.
 - **Transform Controls**: A toggleable 3D gizmo allows users to move and rotate their folded creations in space.
 - **History Management**: Full undo and redo support for complex origami sequences.
+- **WebAssembly Engine**: Ported core physics calculations to Rust/Wasm for memory-efficient mesh deformation.
+- **Compute Shaders**: Parallel paper collision detection implemented in WebGPU.
 
 ## Technologies Used
 

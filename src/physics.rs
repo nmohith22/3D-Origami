@@ -10,10 +10,6 @@ pub extern "C" fn calculate_fold_deformations(
     fold_axis_y: f32,
     angle: f32,
 ) {
-    // Ponytail: Minimal Rust Wasm port for the math engine.
-    // In production, we'd use wasm-bindgen, but bare pointers are faster 
-    // and show deeper understanding of the JS/Wasm memory boundary.
-    
     let vertices = unsafe { std::slice::from_raw_parts_mut(vertices_ptr, num_vertices * 3) };
     
     let cos_a = angle.cos();

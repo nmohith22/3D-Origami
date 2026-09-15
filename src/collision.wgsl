@@ -1,6 +1,3 @@
-// Ponytail: Minimal WebGPU compute shader for paper clipping detection.
-// This replaces the WebGL Raycaster approach for O(n^2) vertex collision.
-
 struct Vertex {
     pos: vec3<f32>,
     pad: f32, // Padding for 16-byte alignment
