@@ -254,28 +254,30 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     if (handle.type === 'edge') {
       const rawDir = new THREE.Vector2(rawBx - handle.p.x, rawBy - handle.p.y)
       let projection = rawDir.dot(handle.normal)
-      projection = Math.max(0, projection) // Prevent dragging outwards (unfolding) which causes math glitches
+      projection = Math.max(0, projection)
       const projectedX = handle.p.x + handle.normal.x * projection
       const projectedY = handle.p.y + handle.normal.y * projection
       
-      B.set(snapToGrid(projectedX), snapToGrid(projectedY))
+      // Do not snap during drag to ensure buttery smooth tracking
+      B.set(projectedX, projectedY)
       
       if (Math.abs(handle.normal.y) < 0.01) {
-        setHoveredVLine(B.x)
+        setHoveredVLine(snapToGrid(B.x))
         setHoveredHLine(null)
         setHoveredPoint(null)
       } else if (Math.abs(handle.normal.x) < 0.01) {
-        setHoveredHLine(B.y)
+        setHoveredHLine(snapToGrid(B.y))
         setHoveredVLine(null)
         setHoveredPoint(null)
       } else {
-        setHoveredPoint({ x: B.x, y: B.y })
+        setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
         setHoveredVLine(null)
         setHoveredHLine(null)
       }
     } else {
-      B.set(snapToGrid(rawBx), snapToGrid(rawBy))
-      setHoveredPoint({ x: B.x, y: B.y })
+      // Do not snap during drag
+      B.set(rawBx, rawBy)
+      setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
       setHoveredHLine(null)
       setHoveredVLine(null)
     }
@@ -283,19 +285,22 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     dragState.current.B = B
 
     let angle = 0
+    let dragP1 = new THREE.Vector2()
     const A = handle.p
     if (A.distanceTo(B) > 0.01) {
-      const vectorAB = new THREE.Vector2().subVectors(B, A)
-      const vectorARaw = new THREE.Vector2().subVectors(dragState.current.rawB, A)
-      const t = vectorARaw.dot(vectorAB) / vectorAB.lengthSq()
-      const clampedT = Math.max(0, Math.min(1, t))
-      angle = Math.acos(1 - 2 * clampedT)
+      // Smooth single-stage 3D lift
+      angle = Math.PI * 0.85
+      
+      const dist = A.distanceTo(B)
+      const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
+      // Adjust crease so the tip smoothly tracks the mouse while lifted
+      const L = dist / (1 - Math.cos(angle))
+      dragP1.addVectors(A, dirAB.multiplyScalar(L))
     }
 
     if (angle > 0) {
-      const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
       const activeNormal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
-      const activeP1 = new THREE.Vector3(midpoint.x, midpoint.y, 0)
+      const activeP1 = new THREE.Vector3(dragP1.x, dragP1.y, 0)
       
       let maxFoldCount = 0
       for (let i = 0; i < originalPositions.length; i += 3) {
@@ -328,23 +333,17 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       setHoveredPoint(null)
 
       if (A.distanceTo(B) > 0.1 && angle > 0) {
-        let finalAngle = angle
-        if (!isSticky) {
-          if (angle > Math.PI * 0.85) {
-            finalAngle = Math.PI 
-          } else {
-            return 
-          }
-        } else {
-          // Magnetic snapping for Sticky Mode to make it easier to use
-          if (finalAngle > Math.PI * 0.95) finalAngle = Math.PI
-          else if (Math.abs(finalAngle - Math.PI / 2) < 0.08) finalAngle = Math.PI / 2
-        }
+        // ALWAYS snap to flat (Math.PI) to prevent the 3D physics clipping bug
+        // (the engine cannot mathematically support drawing creases across elevated flaps)
+        let finalAngle = Math.PI
         
-        const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
-        const dirAB = new THREE.Vector2().subVectors(B, A)
+        // We MUST snap B to grid on commit so alignment is perfectly preserved
+        const snappedB = new THREE.Vector2(snapToGrid(B.x), snapToGrid(B.y))
+        
+        const midpoint = new THREE.Vector2().addVectors(A, snappedB).multiplyScalar(0.5)
+        const dirAB = new THREE.Vector2().subVectors(snappedB, A)
         const axis = new THREE.Vector3(-dirAB.y, dirAB.x, 0).normalize()
-        const normal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
+        const normal = new THREE.Vector3(A.x - snappedB.x, A.y - snappedB.y, 0).normalize()
 
         onCommitFold({
           id: Date.now(),
