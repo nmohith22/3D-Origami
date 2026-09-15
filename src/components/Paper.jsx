@@ -111,7 +111,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     if (closestCorner) return closestCorner
     
     let closestEdge = null
-    let minEdgeDistSq = 0.4 * 0.4
+    let minEdgeDistSq = 0.8 * 0.8
     let edgeGrabPoint = null
 
     for (const h of handles) {
@@ -523,6 +523,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     backGeomRef.current.computeVertexNormals()
     frontGeomRef.current.computeBoundingSphere()
     backGeomRef.current.computeBoundingSphere()
+    frontGeomRef.current.computeBoundingBox()
+    backGeomRef.current.computeBoundingBox()
   })
 
   return (
