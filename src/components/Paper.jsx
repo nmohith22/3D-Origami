@@ -250,34 +250,43 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     dragState.current.rawB.set(rawBx, rawBy)
     dragState.current.A = handle.p
 
-    let B = new THREE.Vector2()
+    let currentProj = new THREE.Vector2()
     if (handle.type === 'edge') {
       const rawDir = new THREE.Vector2(rawBx - handle.p.x, rawBy - handle.p.y)
       let projection = rawDir.dot(handle.normal)
       projection = Math.max(0, projection)
       const projectedX = handle.p.x + handle.normal.x * projection
       const projectedY = handle.p.y + handle.normal.y * projection
-      
-      // Do not snap during drag to ensure buttery smooth tracking
-      B.set(projectedX, projectedY)
-      
+      currentProj.set(projectedX, projectedY)
+    } else {
+      currentProj.set(rawBx, rawBy)
+    }
+    
+    // Only push B_max outwards to lock the crease length L. 
+    // This lets the user move back towards A to lift the paper up!
+    if (!dragState.current.B_max || handle.p.distanceTo(currentProj) >= handle.p.distanceTo(dragState.current.B_max)) {
+      dragState.current.B_max = currentProj.clone()
+    }
+    
+    // The target grid point B is derived from B_max
+    let B = new THREE.Vector2(snapToGrid(dragState.current.B_max.x), snapToGrid(dragState.current.B_max.y))
+    
+    if (handle.type === 'edge') {
       if (Math.abs(handle.normal.y) < 0.01) {
-        setHoveredVLine(snapToGrid(B.x))
+        setHoveredVLine(B.x)
         setHoveredHLine(null)
         setHoveredPoint(null)
       } else if (Math.abs(handle.normal.x) < 0.01) {
-        setHoveredHLine(snapToGrid(B.y))
+        setHoveredHLine(B.y)
         setHoveredVLine(null)
         setHoveredPoint(null)
       } else {
-        setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
+        setHoveredPoint({ x: B.x, y: B.y })
         setHoveredVLine(null)
         setHoveredHLine(null)
       }
     } else {
-      // Do not snap during drag
-      B.set(rawBx, rawBy)
-      setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
+      setHoveredPoint({ x: B.x, y: B.y })
       setHoveredHLine(null)
       setHoveredVLine(null)
     }
@@ -285,22 +294,24 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     dragState.current.B = B
 
     let angle = 0
-    let dragP1 = new THREE.Vector2()
+    let activeP1 = new THREE.Vector2()
     const A = handle.p
     if (A.distanceTo(B) > 0.01) {
-      // Smooth single-stage 3D lift
-      angle = Math.PI * 0.85
+      const distToCursor = A.distanceTo(currentProj)
+      const L = A.distanceTo(B) / 2
       
-      const dist = A.distanceTo(B)
-      const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
-      // Adjust crease so the tip smoothly tracks the mouse while lifted
-      const L = dist / (1 - Math.cos(angle))
-      dragP1.addVectors(A, dirAB.multiplyScalar(L))
+      // Dynamic lift angle so the tip exactly matches the mouse horizontal projection!
+      let cosTheta = 1 - (distToCursor / L)
+      cosTheta = Math.max(-1, Math.min(1, cosTheta))
+      angle = Math.acos(cosTheta)
+      
+      const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
+      activeP1.copy(midpoint)
     }
 
     if (angle > 0) {
       const activeNormal = new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize()
-      const activeP1 = new THREE.Vector3(dragP1.x, dragP1.y, 0)
+      const activeP13D = new THREE.Vector3(activeP1.x, activeP1.y, 0)
       
       let maxFoldCount = 0
       for (let i = 0; i < originalPositions.length; i += 3) {
@@ -312,7 +323,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
             count++
           }
         }
-        const toActive = new THREE.Vector3().subVectors(vOrig, activeP1)
+        const toActive = new THREE.Vector3().subVectors(vOrig, activeP13D)
         if (toActive.dot(activeNormal) > 0) {
           count++
         }
@@ -333,9 +344,17 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       setHoveredPoint(null)
 
       if (A.distanceTo(B) > 0.1 && angle > 0) {
-        // ALWAYS snap to flat (Math.PI) to prevent the 3D physics clipping bug
-        // (the engine cannot mathematically support drawing creases across elevated flaps)
-        let finalAngle = Math.PI
+        let finalAngle = angle
+        
+        if (!isSticky) {
+          // In regular mode, force flat folding (Math.PI) 
+          if (angle > Math.PI * 0.85) finalAngle = Math.PI
+          else return // Require pulling far enough to commit
+        } else {
+          // Sticky mode: snap to 90 degrees if near it
+          if (finalAngle > Math.PI * 0.95) finalAngle = Math.PI
+          else if (Math.abs(finalAngle - Math.PI / 2) < 0.2) finalAngle = Math.PI / 2
+        }
         
         // We MUST snap B to grid on commit so alignment is perfectly preserved
         const snappedB = new THREE.Vector2(snapToGrid(B.x), snapToGrid(B.y))
@@ -424,6 +443,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
+          // Prevent 3D flaps from swinging under the floor when folded across
+          if (vf.z < 0) vf.z = 0
           countF++
           vf.z += 0.004 * (j + 1)
         }
@@ -436,6 +457,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
           const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
           vf.sub(pivotF).applyMatrix4(rot).add(pivotF)
+          if (vf.z < 0) vf.z = 0
           countF++
           vf.z += 0.004 * (committedFolds.length + 1) * (activeCrease.angle / Math.PI)
         }
@@ -458,9 +480,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vb, fold.p1)
         const dist = toVertex.dot(fold.normal)
         if (dist > 0) {
-          const pivotB = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
+          const pivotF = new THREE.Vector3(fold.p1.x, fold.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(fold.axis, fold.angle)
-          vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
+          vb.sub(pivotF).applyMatrix4(rot).add(pivotF)
+          if (vb.z < 0) vb.z = 0
           countB++
           vb.z += 0.004 * (j + 1)
         }
@@ -470,9 +493,10 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
         const toVertex = new THREE.Vector3().subVectors(vb, activeCrease.p1)
         const dist = toVertex.dot(activeCrease.normal)
         if (dist > 0) {
-          const pivotB = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
+          const pivotF = new THREE.Vector3(activeCrease.p1.x, activeCrease.p1.y, 0)
           const rot = new THREE.Matrix4().makeRotationAxis(activeCrease.axis, activeCrease.angle)
-          vb.sub(pivotB).applyMatrix4(rot).add(pivotB)
+          vb.sub(pivotF).applyMatrix4(rot).add(pivotF)
+          if (vb.z < 0) vb.z = 0
           countB++
           vb.z += 0.004 * (committedFolds.length + 1) * (activeCrease.angle / Math.PI)
         }
