@@ -260,25 +260,25 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       currentProj.set(rawBx, rawBy)
     }
     
-    // Snap to grid for perfect alignment
-    let B = new THREE.Vector2(snapToGrid(currentProj.x), snapToGrid(currentProj.y))
+    // Do NOT snap B to grid during drag to ensure buttery smooth rope-like tracking!
+    let B = new THREE.Vector2(currentProj.x, currentProj.y)
     
     if (handle.type === 'edge') {
       if (Math.abs(handle.normal.y) < 0.01) {
-        setHoveredVLine(B.x)
+        setHoveredVLine(snapToGrid(B.x))
         setHoveredHLine(null)
         setHoveredPoint(null)
       } else if (Math.abs(handle.normal.x) < 0.01) {
-        setHoveredHLine(B.y)
+        setHoveredHLine(snapToGrid(B.y))
         setHoveredVLine(null)
         setHoveredPoint(null)
       } else {
-        setHoveredPoint({ x: B.x, y: B.y })
+        setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
         setHoveredVLine(null)
         setHoveredHLine(null)
       }
     } else {
-      setHoveredPoint({ x: B.x, y: B.y })
+      setHoveredPoint({ x: snapToGrid(B.x), y: snapToGrid(B.y) })
       setHoveredHLine(null)
       setHoveredVLine(null)
     }
@@ -354,16 +354,31 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       if (A.distanceTo(B) > 0.1 && angle > 0) {
         let finalAngle = angle
         
+        if (!isSticky) {
+          // In regular mode, force flat folding (Math.PI) 
+          if (angle > Math.PI * 0.85) finalAngle = Math.PI
+          else return // Require pulling far enough to commit
+        } else {
+          // Sticky mode: snap to flat if VERY close, otherwise preserve the fluid 3D angle they chose!
+          if (finalAngle > Math.PI * 0.95) finalAngle = Math.PI
+        }
+        
         // We MUST snap B to grid on commit so alignment is perfectly preserved for the axis/normal
         const snappedB = new THREE.Vector2(snapToGrid(B.x), snapToGrid(B.y))
         
         const dirAB = new THREE.Vector2().subVectors(snappedB, A)
         const axis = new THREE.Vector3(-dirAB.y, dirAB.x, 0).normalize()
         const normal = new THREE.Vector3(A.x - snappedB.x, A.y - snappedB.y, 0).normalize()
+        
+        // Recalculate p1 precisely using the snapped B so it aligns with the grid!
+        const dist = A.distanceTo(snappedB)
+        let L = dist / (1 - Math.cos(finalAngle))
+        L = Math.min(PAPER_SIZE * 1.5, L)
+        const finalP1 = new THREE.Vector3(A.x, A.y, 0).add(new THREE.Vector3(normal.x, normal.y, 0).multiplyScalar(-L))
 
         onCommitFold({
           id: Date.now(),
-          p1: new THREE.Vector3(dragState.current.activeP1.x, dragState.current.activeP1.y, 0),
+          p1: finalP1,
           axis,
           normal,
           angle: finalAngle
