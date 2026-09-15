@@ -291,22 +291,16 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     if (A.distanceTo(B) > 0.01) {
       const dist = A.distanceTo(currentProj) // Use smooth un-snapped distance for buttery tracking
       
-      if (isSticky) {
-        // Fluid dynamic angle: the further you pull, the more it folds over!
-        // Max distance is roughly PAPER_SIZE * sqrt(2) = 4.24
-        let t = dist / 4.24
-        t = Math.max(0.01, Math.min(1, t))
-        angle = t * Math.PI
-      } else {
-        angle = Math.PI
-      }
+      // We must use a fixed angle. If angle is too small, L becomes massive and rotates the whole paper without folding.
+      // 0.85 * PI (153 degrees) provides a beautiful 3D tent shape where the crease stays on the paper.
+      angle = isSticky ? Math.PI * 0.85 : Math.PI
       
       const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
       
       // Calculate crease position so the tip EXACTLY matches the mouse projection
       let L = dist / (1 - Math.cos(angle))
-      // Clamp L to prevent Math.Infinity crashing the vertex calculations on tiny pulls
-      L = Math.min(PAPER_SIZE * 2, L)
+      // Keep crease reasonably within paper bounds
+      L = Math.min(PAPER_SIZE * 1.5, L)
       
       activeP1.addVectors(A, dirAB.clone().multiplyScalar(L))
     }
