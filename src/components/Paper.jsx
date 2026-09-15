@@ -325,6 +325,16 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
       if (maxFoldCount > 8) {
         angle = 0 // Prevent folding if it exceeds 8 layers
       }
+      
+      const dirAB = new THREE.Vector2().subVectors(B, A)
+      dragState.current.activeCrease = {
+        p1: activeP13D,
+        axis: new THREE.Vector3(-dirAB.y, dirAB.x, 0).normalize(),
+        normal: activeNormal,
+        angle: angle
+      }
+    } else {
+      dragState.current.activeCrease = null
     }
 
     dragState.current.angle = angle
@@ -398,17 +408,8 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     const backColors = backGeomRef.current.attributes.color.array
 
     let activeCrease = null
-    if (active && dragState.current.A && dragState.current.B && dragState.current.A.distanceTo(dragState.current.B) > 0.01) {
-      const A = dragState.current.A
-      const B = dragState.current.B
-      const midpoint = new THREE.Vector2().addVectors(A, B).multiplyScalar(0.5)
-      const dirAB = new THREE.Vector2().subVectors(B, A)
-      activeCrease = {
-        p1: new THREE.Vector3(midpoint.x, midpoint.y, 0),
-        axis: new THREE.Vector3(-dirAB.y, dirAB.x, 0).normalize(),
-        normal: new THREE.Vector3(A.x - B.x, A.y - B.y, 0).normalize(),
-        angle: dragState.current.angle
-      }
+    if (active && dragState.current.activeCrease) {
+      activeCrease = dragState.current.activeCrease
     }
 
     for (let i = 0; i < positions.length; i += 3) {
