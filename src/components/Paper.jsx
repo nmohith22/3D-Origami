@@ -97,7 +97,7 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
 
   const getGrabHandle = (x, y) => {
     let closestCorner = null
-    let minCornerDistSq = 0.4 * 0.4
+    let minCornerDistSq = 0.8 * 0.8
     
     for (const h of handles) {
       if (h.type !== 'corner') continue
@@ -289,14 +289,25 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
     let activeP1 = new THREE.Vector2()
     const A = handle.p
     if (A.distanceTo(B) > 0.01) {
-      // 1-stage smooth drag! Regular mode = flat. Sticky mode = 90 degree 3D lift!
-      angle = isSticky ? Math.PI / 2 : Math.PI
-      
       const dist = A.distanceTo(currentProj) // Use smooth un-snapped distance for buttery tracking
+      
+      if (isSticky) {
+        // Fluid dynamic angle: the further you pull, the more it folds over!
+        // Max distance is roughly PAPER_SIZE * sqrt(2) = 4.24
+        let t = dist / 4.24
+        t = Math.max(0.01, Math.min(1, t))
+        angle = t * Math.PI
+      } else {
+        angle = Math.PI
+      }
+      
       const dirAB = new THREE.Vector2().subVectors(B, A).normalize()
       
       // Calculate crease position so the tip EXACTLY matches the mouse projection
-      const L = dist / (1 - Math.cos(angle))
+      let L = dist / (1 - Math.cos(angle))
+      // Clamp L to prevent Math.Infinity crashing the vertex calculations on tiny pulls
+      L = Math.min(PAPER_SIZE * 2, L)
+      
       activeP1.addVectors(A, dirAB.clone().multiplyScalar(L))
     }
 
