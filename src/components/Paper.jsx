@@ -2,6 +2,8 @@ import React, { useRef, useState, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useDrag } from '@use-gesture/react'
 import * as THREE from 'three'
+import { initWasm, wasmMath, wasmMemory } from '../physicsWasm'
+import { initWebGPU, runCollisionCompute } from '../collisionWebGPU'
 
 const PAPER_SIZE = 3
 const GRID_SIZE = 32
@@ -23,6 +25,11 @@ export function Paper({ mode, isSticky, showGrid, committedFolds, onCommitFold, 
   const frontGeomRef = useRef()
   const backGeomRef = useRef()
   
+  React.useEffect(() => {
+    initWasm();
+    initWebGPU();
+  }, []);
+
   const [active, setActive] = useState(false)
   const [hoveredHandle, setHoveredHandle] = useState(null)
   
